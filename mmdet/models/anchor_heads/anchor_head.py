@@ -72,6 +72,7 @@ class AnchorHead(nn.Module):
         self.loss_bbox = build_loss(loss_bbox)
         self.fp16_enabled = False
 
+        # 由于每层feature map的尺寸不同，所以anchor的base size不同
         self.anchor_generators = []
         for anchor_base in self.anchor_base_sizes:
             self.anchor_generators.append(
@@ -261,8 +262,12 @@ class AnchorHead(nn.Module):
                 self.anchor_strides[i],
                 device=device) for i in range(num_levels)
         ]
+        
+        # 对每张图片分别处理
         result_list = []
         for img_id in range(len(img_metas)):
+            # 取出每张图片 cls_score和bbox_pred组成List（各feature map）
+            # 对网络生成结果，在计算损失以外，用于proposal等时使用detach
             cls_score_list = [
                 cls_scores[i][img_id].detach() for i in range(num_levels)
             ]
