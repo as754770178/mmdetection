@@ -23,13 +23,17 @@ class SamplingResult(util_mixins.NiceRepr):
 
     def __init__(self, pos_inds, neg_inds, bboxes, gt_bboxes, assign_result,
                  gt_flags):
+        # 在proposals（bboxes）中选取的前景和背景对应的index
         self.pos_inds = pos_inds
         self.neg_inds = neg_inds
         self.pos_bboxes = bboxes[pos_inds]
         self.neg_bboxes = bboxes[neg_inds]
+        # pos proposal中哪些是gt
         self.pos_is_gt = gt_flags[pos_inds]
 
+        # 输入的gt bboxes数目：图片中gt总数
         self.num_gts = gt_bboxes.shape[0]
+        # 取出的前景proposal对应的gt id；执行-1恢复id
         self.pos_assigned_gt_inds = assign_result.gt_inds[pos_inds] - 1
 
         if gt_bboxes.numel() == 0:
@@ -39,10 +43,11 @@ class SamplingResult(util_mixins.NiceRepr):
         else:
             if len(gt_bboxes.shape) < 2:
                 gt_bboxes = gt_bboxes.view(-1, 4)
-
+            # 和前景proposal对应的gt bboxes
             self.pos_gt_bboxes = gt_bboxes[self.pos_assigned_gt_inds, :]
 
         if assign_result.labels is not None:
+            # 和前景proposal对应的gt labels
             self.pos_gt_labels = assign_result.labels[pos_inds]
         else:
             self.pos_gt_labels = None
