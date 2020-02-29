@@ -172,10 +172,14 @@ class FPN(nn.Module):
             # add conv layers on top of original feature maps (RetinaNet)
             else:
                 if self.extra_convs_on_inputs:
+                    # 在输入的第backbone_end_level个（一般是最后一个）
                     orig = inputs[self.backbone_end_level - 1]
                     outs.append(self.fpn_convs[used_backbone_levels](orig))
                 else:
+                    # 在之前输出的最后一个做conv加入output
                     outs.append(self.fpn_convs[used_backbone_levels](outs[-1]))
+                    
+                # ，对outs中最后一个迭代使用conv，增加output
                 for i in range(used_backbone_levels + 1, self.num_outs):
                     if self.relu_before_extra_convs:
                         outs.append(self.fpn_convs[i](F.relu(outs[-1])))
