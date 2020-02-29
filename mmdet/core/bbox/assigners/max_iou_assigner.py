@@ -94,7 +94,8 @@ class MaxIoUAssigner(BaseAssigner):
                 gt_bboxes_ignore = gt_bboxes_ignore.cpu()
             if gt_labels is not None:
                 gt_labels = gt_labels.cpu()
-
+        
+        # 去除proposals中置信度，gt_bboxes仅用于算overlaps
         bboxes = bboxes[:, :4]
         overlaps = bbox_overlaps(gt_bboxes, bboxes)
 
@@ -120,7 +121,9 @@ class MaxIoUAssigner(BaseAssigner):
 
     def assign_wrt_overlaps(self, overlaps, gt_labels=None):
         """Assign w.r.t. the overlaps of bboxes with gts.
-
+        -1：代表ignore
+        0：代表背景
+        其他值：gt_labels对应值
         Args:
             overlaps (Tensor): Overlaps between k gt_bboxes and n bboxes,
                 shape(k, n).
@@ -132,10 +135,12 @@ class MaxIoUAssigner(BaseAssigner):
         num_gts, num_bboxes = overlaps.size(0), overlaps.size(1)
 
         # 1. assign -1 by default
+        # assigned_gt_inds：每个proposal对应的gt的id
         assigned_gt_inds = overlaps.new_full((num_bboxes, ),
                                              -1,
                                              dtype=torch.long)
-
+        
+        # 原来没有
         if num_gts == 0 or num_bboxes == 0:
             # No ground truth or boxes, return empty assignment
             max_overlaps = overlaps.new_zeros((num_bboxes, ))
@@ -161,6 +166,7 @@ class MaxIoUAssigner(BaseAssigner):
         gt_max_overlaps, gt_argmax_overlaps = overlaps.max(dim=1)
 
         # 2. assign negative: below
+        # 如果proposal和gt的最大iou小于一定阈值（neg_iou_thr）置0
         if isinstance(self.neg_iou_thr, float):
             assigned_gt_inds[(max_overlaps >= 0)
                              & (max_overlaps < self.neg_iou_thr)] = 0
@@ -170,18 +176,22 @@ class MaxIoUAssigner(BaseAssigner):
                              & (max_overlaps < self.neg_iou_thr[1])] = 0
 
         # 3. assign positive: above positive IoU threshold
+        # 如果proposal和gt的最大iou大于一定阈值（pos_iou_thr），置是第几个gt
         pos_inds = max_overlaps >= self.pos_iou_thr
         assigned_gt_inds[pos_inds] = argmax_overlaps[pos_inds] + 1
 
         # 4. assign fg: for each gt, proposals with highest IoU
+        # 对于每个gt存在和proposal的IOU大于一定阈值（min_pos_iou），置是第几个gt
         for i in range(num_gts):
             if gt_max_overlaps[i] >= self.min_pos_iou:
                 if self.gt_max_assign_all:
+                    # 是否所有与该gt具有该IOU值都置是第几个gt
                     max_iou_inds = overlaps[i, :] == gt_max_overlaps[i]
                     assigned_gt_inds[max_iou_inds] = i + 1
                 else:
                     assigned_gt_inds[gt_argmax_overlaps[i]] = i + 1
 
+        # 根据assigned_gt_inds生成assigned_labels，即保存proposal对应gt的label
         if gt_labels is not None:
             assigned_labels = assigned_gt_inds.new_zeros((num_bboxes, ))
             pos_inds = torch.nonzero(assigned_gt_inds > 0).squeeze()
