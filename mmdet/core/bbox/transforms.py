@@ -167,6 +167,7 @@ def bbox2roi(bbox_list):
     Returns:
         Tensor: shape (n, 5), [batch_ind, x1, y1, x2, y2]
     """
+    # roi就是bbox即porposal，只是加上image的index
     rois_list = []
     for img_id, bboxes in enumerate(bbox_list):
         if bboxes.size(0) > 0:
