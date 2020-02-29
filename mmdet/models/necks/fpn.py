@@ -46,7 +46,8 @@ class FPN(nn.Module):
         outputs[2].shape = torch.Size([1, 11, 84, 84])
         outputs[3].shape = torch.Size([1, 11, 43, 43])
     """
-
+    # resnet：不断增加channel，缩小feature map尺寸
+    # fpn：将所有feature map的channel数固定
     def __init__(self,
                  in_channels,
                  out_channels,
@@ -114,6 +115,7 @@ class FPN(nn.Module):
         if add_extra_convs and extra_levels >= 1:
             for i in range(extra_levels):
                 if i == 0 and self.extra_convs_on_inputs:
+                    # 由end_level <= len(in_channels)保证不越界
                     in_channels = self.in_channels[self.backbone_end_level - 1]
                 else:
                     in_channels = out_channels
@@ -140,6 +142,7 @@ class FPN(nn.Module):
         assert len(inputs) == len(self.in_channels)
 
         # build laterals
+        # 横向所有feautre map固定到相同channel
         laterals = [
             lateral_conv(inputs[i + self.start_level])
             for i, lateral_conv in enumerate(self.lateral_convs)
@@ -149,6 +152,7 @@ class FPN(nn.Module):
         used_backbone_levels = len(laterals)
         for i in range(used_backbone_levels - 1, 0, -1):
             prev_shape = laterals[i - 1].shape[2:]
+            # 通过插值实现上采样：https://www.cnblogs.com/wanghui-garcia/p/11399034.html
             laterals[i - 1] += F.interpolate(
                 laterals[i], size=prev_shape, mode='nearest')
 
@@ -163,6 +167,7 @@ class FPN(nn.Module):
             # (e.g., Faster R-CNN, Mask R-CNN)
             if not self.add_extra_convs:
                 for i in range(self.num_outs - used_backbone_levels):
+                    # 在backbone输出基础上，对outs中最后一个迭代使用max_pool，增加output
                     outs.append(F.max_pool2d(outs[-1], 1, stride=2))
             # add conv layers on top of original feature maps (RetinaNet)
             else:
