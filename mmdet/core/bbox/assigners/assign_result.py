@@ -181,12 +181,15 @@ class AssignResult(util_mixins.NiceRepr):
         return self
 
     def add_gt_(self, gt_labels):
+        # proposal对应gt的id：直接range生成id + 1，避免和0冲突
         self_inds = torch.arange(
             1, len(gt_labels) + 1, dtype=torch.long, device=gt_labels.device)
         self.gt_inds = torch.cat([self_inds, self.gt_inds])
 
+        # proposal和gt的iou：直接1
         self.max_overlaps = torch.cat(
             [self.max_overlaps.new_ones(len(gt_labels)), self.max_overlaps])
 
+        # proposal对应gt的label：即gt_labels
         if self.labels is not None:
             self.labels = torch.cat([gt_labels, self.labels])
