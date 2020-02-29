@@ -75,22 +75,31 @@ def delta2bbox(rois,
                 [0.0000, 0.6321, 7.3891, 0.3679],
                 [5.8967, 2.9251, 5.5033, 3.2749]])
     """
+    # 对pred的系数进行偏移
     means = deltas.new_tensor(means).repeat(1, deltas.size(1) // 4)
     stds = deltas.new_tensor(stds).repeat(1, deltas.size(1) // 4)
     denorm_deltas = deltas * stds + means
+    
+    # 取出 x y w h的对应值，隔4个取1个
     dx = denorm_deltas[:, 0::4]
     dy = denorm_deltas[:, 1::4]
     dw = denorm_deltas[:, 2::4]
     dh = denorm_deltas[:, 3::4]
+    
+    # 由于torch.log(gh / ph) 所以取log => 避免gt和roi中anchor差别太大
     max_ratio = np.abs(np.log(wh_ratio_clip))
     dw = dw.clamp(min=-max_ratio, max=max_ratio)
     dh = dh.clamp(min=-max_ratio, max=max_ratio)
+    
+    # rois：就是生成的anchors
     # Compute center of each roi
     px = ((rois[:, 0] + rois[:, 2]) * 0.5).unsqueeze(1).expand_as(dx)
     py = ((rois[:, 1] + rois[:, 3]) * 0.5).unsqueeze(1).expand_as(dy)
     # Compute width/height of each roi
     pw = (rois[:, 2] - rois[:, 0] + 1.0).unsqueeze(1).expand_as(dw)
     ph = (rois[:, 3] - rois[:, 1] + 1.0).unsqueeze(1).expand_as(dh)
+    
+    # anchor和系数生成真实坐标
     # Use exp(network energy) to enlarge/shrink each roi
     gw = pw * dw.exp()
     gh = ph * dh.exp()
