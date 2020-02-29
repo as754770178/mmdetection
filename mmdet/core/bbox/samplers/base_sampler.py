@@ -13,7 +13,9 @@ class BaseSampler(metaclass=ABCMeta):
                  neg_pos_ub=-1,
                  add_gt_as_proposals=True,
                  **kwargs):
+        # 最终输出pos和neg的proposal总数
         self.num = num
+        # pos proposal占的比例
         self.pos_fraction = pos_fraction
         self.neg_pos_ub = neg_pos_ub
         self.add_gt_as_proposals = add_gt_as_proposals
@@ -66,6 +68,7 @@ class BaseSampler(metaclass=ABCMeta):
 
         bboxes = bboxes[:, :4]
 
+        # gt_flags：proposals中哪些是gt
         gt_flags = bboxes.new_zeros((bboxes.shape[0], ), dtype=torch.uint8)
         if self.add_gt_as_proposals and len(gt_bboxes) > 0:
             if gt_labels is None:
@@ -77,18 +80,23 @@ class BaseSampler(metaclass=ABCMeta):
             gt_flags = torch.cat([gt_ones, gt_flags])
 
         num_expected_pos = int(self.num * self.pos_fraction)
+        # 根据gt_inds，取出有对应gt的proposals的index；如果超过num_expected_pos，则随机取
         pos_inds = self.pos_sampler._sample_pos(
             assign_result, num_expected_pos, bboxes=bboxes, **kwargs)
         # We found that sampled indices have duplicated items occasionally.
         # (may be a bug of PyTorch)
         pos_inds = pos_inds.unique()
         num_sampled_pos = pos_inds.numel()
+        
+        # 取背景（0）的proposal
         num_expected_neg = self.num - num_sampled_pos
+        # neg_pos_ub限制背景和前景比例
         if self.neg_pos_ub >= 0:
             _pos = max(1, num_sampled_pos)
             neg_upper_bound = int(self.neg_pos_ub * _pos)
             if num_expected_neg > neg_upper_bound:
                 num_expected_neg = neg_upper_bound
+        # 根据gt_inds，取出有背景的proposals的index
         neg_inds = self.neg_sampler._sample_neg(
             assign_result, num_expected_neg, bboxes=bboxes, **kwargs)
         neg_inds = neg_inds.unique()
