@@ -111,6 +111,8 @@ def delta2bbox(rois,
     y1 = gy - gh * 0.5 + 0.5
     x2 = gx + gw * 0.5 - 0.5
     y2 = gy + gh * 0.5 - 0.5
+    
+    # max_shape是resize后图片尺寸
     if max_shape is not None:
         x1 = x1.clamp(min=0, max=max_shape[1] - 1)
         y1 = y1.clamp(min=0, max=max_shape[0] - 1)
