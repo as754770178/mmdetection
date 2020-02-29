@@ -20,7 +20,10 @@ def tensor2imgs(tensor, mean=(0, 0, 0), std=(1, 1, 1), to_rgb=True):
 
 def multi_apply(func, *args, **kwargs):
     pfunc = partial(func, **kwargs) if kwargs else func
+    # args作为List，分别调用func
     map_results = map(pfunc, *args)
+    # map_results是多个结构相同的输出组成List，例如结构为：[rpn_cls_score, rpn_bbox_pred]
+    # zip将每个List对应相同类放到一起，再由map对每类放到一起结果执行List
     return tuple(map(list, zip(*map_results)))
 
 
