@@ -177,6 +177,7 @@ class MaxIoUAssigner(BaseAssigner):
 
         # 3. assign positive: above positive IoU threshold
         # 如果proposal和gt的最大iou大于一定阈值（pos_iou_thr），置是第几个gt
+        # +1：id（第几个gt）从0开始，从而和0避开
         pos_inds = max_overlaps >= self.pos_iou_thr
         assigned_gt_inds[pos_inds] = argmax_overlaps[pos_inds] + 1
 
