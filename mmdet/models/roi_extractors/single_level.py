@@ -66,6 +66,7 @@ class SingleRoIExtractor(nn.Module):
         Returns:
             Tensor: Level index (0-based) of each RoI, shape (k, )
         """
+        # 根据proposal面积，推出proposal应该在第几层
         scale = torch.sqrt(
             (rois[:, 3] - rois[:, 1] + 1) * (rois[:, 4] - rois[:, 2] + 1))
         target_lvls = torch.floor(torch.log2(scale / self.finest_scale + 1e-6))
@@ -88,17 +89,28 @@ class SingleRoIExtractor(nn.Module):
 
     @force_fp32(apply_to=('feats', ), out_fp16=True)
     def forward(self, feats, rois, roi_scale_factor=None):
+        # 1层feature map直接处理
+        # 多层通过map_roi_levels找到roi对应feature map
         if len(feats) == 1:
             return self.roi_layers[0](feats[0], rois)
-
-        out_size = self.roi_layers[0].out_size
+        
         num_levels = len(feats)
+        # map_roi_levels：将roi分到不同feature map上
         target_lvls = self.map_roi_levels(rois, num_levels)
-        roi_feats = feats[0].new_zeros(
-            rois.size(0), self.out_channels, *out_size)
+        
+      
+        
+        # 根据roi_scale_factor修改roi的w/h
         if roi_scale_factor is not None:
             rois = self.roi_rescale(rois, roi_scale_factor)
+            
+        # 处理每层feature map
+        out_size = self.roi_layers[0].out_size
+        # [proposal num, feat's channle, out_size]
+        roi_feats = feats[0].new_zeros(
+            rois.size(0), self.out_channels, *out_size)
         for i in range(num_levels):
+            # 找到该层的roi
             inds = target_lvls == i
             if inds.any():
                 rois_ = rois[inds, :]
