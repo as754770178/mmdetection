@@ -18,11 +18,14 @@ def mask_target_single(pos_proposals, pos_assigned_gt_inds, gt_masks, cfg):
     num_pos = pos_proposals.size(0)
     mask_targets = []
     if num_pos > 0:
+        # 对proposal进行处理，限定不超出gt_mask
         proposals_np = pos_proposals.cpu().numpy()
         _, maxh, maxw = gt_masks.shape
         proposals_np[:, [0, 2]] = np.clip(proposals_np[:, [0, 2]], 0, maxw - 1)
         proposals_np[:, [1, 3]] = np.clip(proposals_np[:, [1, 3]], 0, maxh - 1)
         pos_assigned_gt_inds = pos_assigned_gt_inds.cpu().numpy()
+        
+        # 根据porposal截取mask中内容并resize
         for i in range(num_pos):
             gt_mask = gt_masks[pos_assigned_gt_inds[i]]
             bbox = proposals_np[i, :].astype(np.int32)
