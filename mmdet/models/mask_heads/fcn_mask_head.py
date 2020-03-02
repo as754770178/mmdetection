@@ -166,8 +166,11 @@ class FCNMaskHead(nn.Module):
 
         cls_segms = [[] for _ in range(self.num_classes - 1)]
         bboxes = det_bboxes.cpu().numpy()[:, :4]
+        # 用于获取每个box的label对应mask_pred_
         labels = det_labels.cpu().numpy() + 1
 
+        # 获取img_h, img_w用于构建im_mask
+        # 如果scale，则把bbox变成原图尺寸；否则，bbox不变，img_h, img_w变成feature map尺寸
         if rescale:
             img_h, img_w = ori_shape[:2]
         else:
@@ -184,11 +187,14 @@ class FCNMaskHead(nn.Module):
             h = max(bbox[3] - bbox[1] + 1, 1)
 
             if not self.class_agnostic:
+                # 取出类别对应的通道
                 mask_pred_ = mask_pred[i, label, :, :]
             else:
                 mask_pred_ = mask_pred[i, 0, :, :]
-
+            
+            # mask没有scale一说，会按照bbox大小resize
             bbox_mask = mmcv.imresize(mask_pred_, (w, h))
+            # 卡mask置信度
             bbox_mask = (bbox_mask > rcnn_test_cfg.mask_thr_binary).astype(
                 np.uint8)
 
@@ -196,6 +202,7 @@ class FCNMaskHead(nn.Module):
                 im_mask = bbox_mask
             else:
                 im_mask = np.zeros((img_h, img_w), dtype=np.uint8)
+                # 在im_mask中保存mask的值
                 im_mask[bbox[1]:bbox[1] + h, bbox[0]:bbox[0] + w] = bbox_mask
 
             if rcnn_test_cfg.get('rle_mask_encode', True):
