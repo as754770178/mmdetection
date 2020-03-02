@@ -175,6 +175,7 @@ class MaskTestMixin(object):
                 segm_result = [[]
                                for _ in range(self.mask_head.num_classes - 1)]
             else:
+               # 如果simple_get_bboxes恢复图片原尺寸，这里再变回来（feature map尺寸）=? 因为要roi??
                 _bboxes = (
                     det_bboxes[:, :4] *
                     scale_factor if rescale else det_bboxes)
