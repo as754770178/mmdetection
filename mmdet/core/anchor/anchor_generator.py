@@ -83,6 +83,7 @@ class AnchorGenerator(object):
         return all_anchors
 
     def valid_flags(self, featmap_size, valid_size, device='cuda'):
+        # 只是查看feature map的H W尺寸，不涉及边缘anchor是否超出
         feat_h, feat_w = featmap_size
         valid_h, valid_w = valid_size
         assert valid_h <= feat_h and valid_w <= feat_w
@@ -92,6 +93,7 @@ class AnchorGenerator(object):
         valid_y[:valid_h] = 1
         valid_xx, valid_yy = self._meshgrid(valid_x, valid_y)
         valid = valid_xx & valid_yy
+        # 扩展成每个点N个anchor结构
         valid = valid[:,
                       None].expand(valid.size(0),
                                    self.num_base_anchors).contiguous().view(-1)
