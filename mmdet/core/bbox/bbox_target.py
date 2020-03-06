@@ -40,6 +40,7 @@ def bbox_target_single(pos_bboxes,
                        reg_classes=1,
                        target_means=[.0, .0, .0, .0],
                        target_stds=[1.0, 1.0, 1.0, 1.0]):
+    # 将正例和负例的label和weight拼接在一起
     num_pos = pos_bboxes.size(0)
     num_neg = neg_bboxes.size(0)
     num_samples = num_pos + num_neg
@@ -48,11 +49,13 @@ def bbox_target_single(pos_bboxes,
     bbox_targets = pos_bboxes.new_zeros(num_samples, 4)
     bbox_weights = pos_bboxes.new_zeros(num_samples, 4)
     if num_pos > 0:
+        # 前面是正例的label和weight
         labels[:num_pos] = pos_gt_labels
         pos_weight = 1.0 if cfg.pos_weight <= 0 else cfg.pos_weight
         label_weights[:num_pos] = pos_weight
         pos_bbox_targets = bbox2delta(pos_bboxes, pos_gt_bboxes, target_means,
                                       target_stds)
+        # bbox只对正例算损失
         bbox_targets[:num_pos, :] = pos_bbox_targets
         bbox_weights[:num_pos, :] = 1
     if num_neg > 0:
