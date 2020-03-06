@@ -207,6 +207,7 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, BBoxTestMixin,
 
         # bbox head forward and loss
         if self.with_bbox:
+            # bbox2roi：把batch中不同图片的pred拼接在一起
             rois = bbox2roi([res.bboxes for res in sampling_results])
             # TODO: a more flexible way to decide which feature maps to use
             bbox_feats = self.bbox_roi_extractor(
@@ -214,7 +215,7 @@ class TwoStageDetector(BaseDetector, RPNTestMixin, BBoxTestMixin,
             if self.with_shared_head:
                 bbox_feats = self.shared_head(bbox_feats)
             cls_score, bbox_pred = self.bbox_head(bbox_feats)
-
+            # get_target：把batch中不同图片的target拼接在一起
             bbox_targets = self.bbox_head.get_target(sampling_results,
                                                      gt_bboxes, gt_labels,
                                                      self.train_cfg.rcnn)
