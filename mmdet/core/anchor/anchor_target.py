@@ -103,6 +103,7 @@ def anchor_target_single(flat_anchors,
                          label_channels=1,
                          sampling=True,
                          unmap_outputs=True):
+    # 过滤掉不在resize_image中anchor
     inside_flags = anchor_inside_flags(flat_anchors, valid_flags,
                                        img_meta['img_shape'][:2],
                                        cfg.allowed_border)
@@ -121,7 +122,7 @@ def anchor_target_single(flat_anchors,
         bbox_sampler = PseudoSampler()
         sampling_result = bbox_sampler.sample(assign_result, anchors,
                                               gt_bboxes)
-
+    # 根据assign和sampler的结果生成bbox_targets，bbox_weights，labels，label_weights
     num_valid_anchors = anchors.shape[0]
     bbox_targets = torch.zeros_like(anchors)
     bbox_weights = torch.zeros_like(anchors)
@@ -131,11 +132,13 @@ def anchor_target_single(flat_anchors,
     pos_inds = sampling_result.pos_inds
     neg_inds = sampling_result.neg_inds
     if len(pos_inds) > 0:
+        # 对pos bbox生成变换系数，以及bbox_weights
         pos_bbox_targets = bbox2delta(sampling_result.pos_bboxes,
                                       sampling_result.pos_gt_bboxes,
                                       target_means, target_stds)
         bbox_targets[pos_inds, :] = pos_bbox_targets
         bbox_weights[pos_inds, :] = 1.0
+        # pos样本的label要不是gt的labels或者是1
         if gt_labels is None:
             labels[pos_inds] = 1
         else:
@@ -148,6 +151,7 @@ def anchor_target_single(flat_anchors,
         label_weights[neg_inds] = 1.0
 
     # map up to original set of anchors
+    # 先补充到num_total_anchors大小，然后根据inside_flags，其他位置补0
     if unmap_outputs:
         num_total_anchors = flat_anchors.size(0)
         labels = unmap(labels, num_total_anchors, inside_flags)
