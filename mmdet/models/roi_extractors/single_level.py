@@ -69,6 +69,8 @@ class SingleRoIExtractor(nn.Module):
         # 根据proposal面积，推出proposal应该在第几层
         scale = torch.sqrt(
             (rois[:, 3] - rois[:, 1] + 1) * (rois[:, 4] - rois[:, 2] + 1))
+        # scale / self.finest_scale: proposal面积是finest_scale多少倍
+        # log2: 0 1 2 3 ==> 对应 1， 2， 4， 8
         target_lvls = torch.floor(torch.log2(scale / self.finest_scale + 1e-6))
         target_lvls = target_lvls.clamp(min=0, max=num_levels - 1).long()
         return target_lvls
