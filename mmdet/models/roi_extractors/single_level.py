@@ -116,6 +116,7 @@ class SingleRoIExtractor(nn.Module):
             inds = target_lvls == i
             if inds.any():
                 rois_ = rois[inds, :]
+                # 不同的feature用不同的roi_layers：spatial_scale不同
                 roi_feats_t = self.roi_layers[i](feats[i], rois_)
                 roi_feats[inds] = roi_feats_t
         return roi_feats
